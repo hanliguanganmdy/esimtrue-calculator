@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>esimtrue-calculator demo</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#1a2332}
+  .field{margin:12px 0} label{display:block;font-weight:600;margin-bottom:6px}
+  input,select{padding:8px 10px;font-size:15px;border:1px solid #cbd5e1;border-radius:8px}
+  button{background:#0a7a4e;color:#fff;border:0;border-radius:8px;padding:10px 22px;font-size:15px;cursor:pointer}
+  .rec{border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin:12px 0}
+  .rec.best{border-color:#0a7a4e;background:#f2fbf6}
+  .cost{font-size:22px;font-weight:700} .tag{background:#0a7a4e;color:#fff;font-size:12px;border-radius:6px;padding:2px 8px;margin-left:8px}
+  pre{background:#f1f5f9;padding:12px;border-radius:8px;overflow:auto;font-size:13px}
+</style>
+</head>
+<body>
+<h1>esimtrue-calculator demo</h1>
+<p>True trip-cost ranking for eSIM plans. <a href="https://esimtrue.com/methodology">How we rank</a></p>
+<div class="field"><label>Trip days</label><input id="days" type="number" value="10" min="1" max="180"></div>
+<div class="field"><label>Daily usage</label>
+<select id="usage"><option value="light">Light (&lt;1GB/day)</option><option value="medium" selected>Medium (1–3GB/day)</option><option value="heavy">Heavy (&gt;3GB/day)</option></select></div>
+<button onclick="run()">Find cheapest</button>
+<div id="out" style="margin-top:16px"></div>
+<h3>Sample data (plans.sample.json)</h3>
+<pre id="data"></pre>
+<script src="esimtrue-calculator.js"></script>
+<script>
+fetch("plans.sample.json").then(r=>r.json()).then(plans=>{
+  document.getElementById("data").textContent = JSON.stringify(plans,null,1).slice(0,600)+"…";
+  window._plans = plans;
+});
+function run(){
+  var days = Math.max(1, parseInt(document.getElementById("days").value||"10",10));
+  var usage = document.getElementById("usage").value;
+  var need = EsimTrueCalc.needForTrip(days, usage);
+  var recs = EsimTrueCalc.recommend(window._plans, days, need);
+  var h = "<p>Need ≈ <b>"+need+"GB</b> for "+days+" days ("+usage+")</p>";
+  recs.forEach(function(r,i){
+    var p=r.plan, lbl=p.unlimited?"Unlimited":p.data_gb+"GB";
+    h+='<div class="rec'+(i===0?' best':'')+'"><div><b>'+p.provider+'</b> · '+lbl+' / '+p.days+' days'+(r.count>1?' × '+r.count:'')+(i===0?'<span class="tag">cheapest</span>':'')+'</div><div class="cost">$'+r.cost+' <span style="font-size:13px;font-weight:400;color:#5b6b82">$'+EsimTrueCalc.costPerDay(r,days)+'/day</span></div></div>';
+  });
+  document.getElementById("out").innerHTML = h || "<p>No plan covers this trip.</p>";
+}
+</script>
+</body>
+</html>
