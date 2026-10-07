@@ -21,6 +21,8 @@
 <div class="field"><label>Trip days</label><input id="days" type="number" value="10" min="1" max="180"></div>
 <div class="field"><label>Daily usage</label>
 <select id="usage"><option value="light">Light (&lt;1GB/day)</option><option value="medium" selected>Medium (1–3GB/day)</option><option value="heavy">Heavy (&gt;3GB/day)</option></select></div>
+<div class="field"><label>Exit IP preference (optional)</label>
+<select id="exitIp"><option value="">No preference</option></select></div>
 <button onclick="run()">Find cheapest</button>
 <div id="out" style="margin-top:16px"></div>
 <h3>Sample data (plans.sample.json)</h3>
@@ -30,16 +32,24 @@
 fetch("plans.sample.json").then(r=>r.json()).then(plans=>{
   document.getElementById("data").textContent = JSON.stringify(plans,null,1).slice(0,600)+"…";
   window._plans = plans;
+  var ips = {};
+  plans.forEach(p=>{(p.exit_ips||[]).forEach(ip=>{ips[ip]=1;});});
+  var sel = document.getElementById("exitIp");
+  Object.keys(ips).sort().forEach(ip=>{
+    var o = document.createElement("option"); o.value = ip; o.textContent = ip; sel.appendChild(o);
+  });
 });
 function run(){
   var days = Math.max(1, parseInt(document.getElementById("days").value||"10",10));
   var usage = document.getElementById("usage").value;
+  var exitIp = document.getElementById("exitIp").value || undefined;
   var need = EsimTrueCalc.needForTrip(days, usage);
-  var recs = EsimTrueCalc.recommend(window._plans, days, need);
-  var h = "<p>Need ≈ <b>"+need+"GB</b> for "+days+" days ("+usage+")</p>";
+  var recs = EsimTrueCalc.recommend(window._plans, days, need, {exitIp: exitIp});
+  var h = "<p>Need ≈ <b>"+need+"GB</b> for "+days+" days ("+usage+")"+(exitIp?" · exit IP "+exitIp:"")+"</p>";
   recs.forEach(function(r,i){
     var p=r.plan, lbl=p.unlimited?"Unlimited":p.data_gb+"GB";
-    h+='<div class="rec'+(i===0?' best':'')+'"><div><b>'+p.provider+'</b> · '+lbl+' / '+p.days+' days'+(r.count>1?' × '+r.count:'')+(i===0?'<span class="tag">cheapest</span>':'')+'</div><div class="cost">$'+r.cost+' <span style="font-size:13px;font-weight:400;color:#5b6b82">$'+EsimTrueCalc.costPerDay(r,days)+'/day</span></div></div>';
+    var ips=(p.exit_ips||[]).join(", ");
+    h+='<div class="rec'+(i===0?' best':'')+'"><div><b>'+p.provider+'</b> · '+lbl+' / '+p.days+' days'+(r.count>1?' × '+r.count:'')+(i===0?'<span class="tag">cheapest</span>':'')+'</div><div class="cost">$'+r.cost+' <span style="font-size:13px;font-weight:400;color:#5b6b82">$'+EsimTrueCalc.costPerDay(r,days)+'/day</span></div>'+(ips?'<div style="font-size:12px;color:#5b6b82">Exit IP: '+ips+'</div>':'')+'</div>';
   });
   document.getElementById("out").innerHTML = h || "<p>No plan covers this trip.</p>";
 }

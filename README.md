@@ -37,6 +37,8 @@ In the browser, drop in the script tag and use `window.EsimTrueCalc` — no depe
 ### `recommend(plans, days, needGb, opts?)`
 Returns up to `opts.topN` (default 3) recommendations sorted by total trip cost ascending. Each is `{ plan, count, cost }` where `count > 1` means "buy N copies of this plan". Plans with `price_usd == null` are skipped. A plan qualifies when `plan.days × count ≥ days` and (`plan.unlimited` or `plan.data_gb × count ≥ needGb`).
 
+`opts.exitIp` (e.g. `"US"`) restricts results to plans whose `exit_ips` array includes that ISO country code — the countries where the plan's traffic breaks out to the internet. Filtering never changes the ranking itself; omit it for no filter.
+
 ### `needForTrip(days, usage)`
 `"light"` (0.7 GB/day: chat, maps, email) · `"medium"` (2 GB/day: social, browsing, music) · `"heavy"` (5 GB/day: video, hotspot).
 
@@ -44,7 +46,7 @@ Returns up to `opts.topN` (default 3) recommendations sorted by total trip cost 
 
 ## Verify our site with it
 
-Every ranking on esimtrue.com can be reproduced: fetch `https://esimtrue.com/plans.json`, filter by country, run `recommend()`. If our displayed order ever disagrees with the algorithm's output, that's a bug — please open an issue.
+Every ranking on esimtrue.com can be reproduced: fetch `https://esimtrue.com/plans/jp.json` (per-country files, e.g. `plans/us.json` — lighter than the full `plans.json`), run `recommend()` on its `plans` array. If our displayed order ever disagrees with the algorithm's output, that's a bug — please open an issue.
 
 Read the full methodology: https://esimtrue.com/methodology
 

@@ -1,5 +1,5 @@
 /*!
- * esimtrue-calculator v1.0.0 — MIT License
+ * esimtrue-calculator v1.1.0 — MIT License
  * Rank eSIM plans by TRUE total trip cost, not headline price.
  *
  * The algorithm behind https://esimtrue.com — an independent eSIM
@@ -8,6 +8,8 @@
  * multiple smaller plans when that beats one big plan.
  *
  * No paid ranking. No tracking. Sorting inputs are only price, days, data.
+ * An optional exit-IP filter (plan.exit_ips) narrows results without
+ * changing the ranking itself.
  * https://esimtrue.com/methodology
  */
 (function (root, factory) {
@@ -26,10 +28,12 @@
   var DAILY_GB = { light: 0.7, medium: 2, heavy: 5 };
 
   /**
-   * A plan: { provider, data_gb, days, price_usd, unlimited, url }
+   * A plan: { provider, data_gb, days, price_usd, unlimited, url, exit_ips }
    * - data_gb: total data in GB (null when fully unlimited)
    * - unlimited: true when total data is unlimited (data_gb may hold a daily high-speed allowance)
    * - days: validity in days; price_usd: total price in USD
+   * - exit_ips: optional array of ISO country codes where the plan's traffic
+   *   breaks out to the internet (e.g. ["US", "SG"]); used only by opts.exitIp
    */
 
   /**
@@ -41,6 +45,9 @@
    * @param {Object} [opts]
    * @param {number} [opts.topN=3]        how many recommendations to return
    * @param {number} [opts.maxCopies=3]   max copies of one plan to stack
+   * @param {string} [opts.exitIp]        only consider plans whose exit_ips includes
+   *                                      this ISO country code (e.g. "US"); omit for no filter.
+   *                                      Filtering never changes the ranking itself.
    * @returns {Array} [{ plan, count, cost }] sorted by total cost ascending.
    *   count > 1 means "buy N copies of this plan" — cheaper than one big plan.
    */
@@ -48,12 +55,14 @@
     opts = opts || {};
     var topN = opts.topN || 3;
     var maxCopies = opts.maxCopies || 3;
+    var exitIp = opts.exitIp || "";
     days = Math.max(1, Math.floor(days));
     needGb = Math.max(0, needGb);
 
     var cands = [];
     plans.forEach(function (p) {
       if (p.price_usd === null || p.price_usd === undefined) return;
+      if (exitIp && (!p.exit_ips || p.exit_ips.indexOf(exitIp) === -1)) return;
       for (var m = 1; m <= maxCopies; m++) {
         if (p.days * m < days) continue;
         var ok = p.unlimited || (p.data_gb * m) >= needGb;
@@ -97,6 +106,6 @@
     needForTrip: needForTrip,
     costPerDay: costPerDay,
     DAILY_GB: DAILY_GB,
-    version: "1.0.0"
+    version: "1.1.0"
   };
 }));
